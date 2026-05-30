@@ -1,0 +1,364 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+local player = game:GetService("Players").LocalPlayer
+local pGui = player:WaitForChild("PlayerGui")
+
+local function getProfileThumbnail()
+    local success, content = pcall(function()
+        local userId = player.UserId
+        local thumbType = Enum.ThumbnailType.HeadShot
+        local thumbSize = Enum.ThumbnailSize.Size100x100
+        return game:GetService("Players"):GetUserThumbnailAsync(userId, thumbType, thumbSize)
+    end)
+    return success and content or "rbxassetid://0"
+end
+
+local function isInside(indicator, target)
+    if not indicator or not target then return false end
+    local iPos = indicator.AbsolutePosition + (indicator.AbsoluteSize / 2)
+    local tPos = target.AbsolutePosition
+    local tSize = target.AbsoluteSize
+    
+    return iPos.X >= tPos.X and iPos.X <= (tPos.X + tSize.X) and
+           iPos.Y >= tPos.Y and iPos.Y <= (tPos.Y + tSize.Y)
+end
+
+local Window = Fluent:CreateWindow({
+    Title = "mage",
+    SubTitle = "by Lemon 🍋  ",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+-- Custom UI for Profile and Toggle
+local function setupCustomUI(window)
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "GardenHorizoneCustomUI"
+    screenGui.DisplayOrder = 999
+    
+    local parent = (gethui and gethui()) or game:GetService("CoreGui") or player:WaitForChild("PlayerGui")
+    screenGui.Parent = parent
+
+    -- Toggle Button
+    local toggleButton = Instance.new("ImageButton")
+    toggleButton.Name = "MenuToggle"
+    toggleButton.Parent = screenGui
+    toggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    toggleButton.BorderSizePixel = 0
+    toggleButton.Position = UDim2.new(0, 15, 0.2, 0) -- Slightly higher
+    toggleButton.Size = UDim2.new(0, 50, 0, 50)
+    toggleButton.Image = "rbxassetid://81617068776053" -- List/Menu icon
+    toggleButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = toggleButton
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 2
+    stroke.Color = Color3.fromRGB(60, 60, 60)
+    stroke.Parent = toggleButton
+
+    toggleButton.MouseButton1Click:Connect(function()
+        if window then
+            window:Minimize()
+        end
+    end)
+
+    -- Profile Section (Robust Discovery)
+    task.spawn(function()
+        local sidebar
+        local start = tick()
+        
+        -- Enhanced search for sidebar
+        while not sidebar and tick() - start < 15 do
+            if window and window.Root then
+                -- Try finding by common name or class
+                sidebar = window.Root:FindFirstChild("Sidebar", true) 
+                
+                if not sidebar then
+                    -- Fallback: Look for any ScrollingFrame that might be the sidebar
+                    for _, v in pairs(window.Root:GetDescendants()) do
+                        if v:IsA("ScrollingFrame") and v.Name == "Sidebar" then
+                            sidebar = v
+                            break
+                        end
+                    end
+                end
+            end
+            if not sidebar then task.wait(0.5) end
+        end
+
+        if sidebar then
+            if sidebar:FindFirstChild("UserProfile") then return end
+
+            local profileFrame = Instance.new("Frame")
+            profileFrame.Name = "UserProfile"
+            profileFrame.Parent = sidebar
+            profileFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            profileFrame.BackgroundTransparency = 0.1
+            profileFrame.BorderSizePixel = 0
+            -- Position it at the bottom of the sidebar
+            profileFrame.Position = UDim2.new(0, 10, 1, -70)
+            profileFrame.Size = UDim2.new(1, -20, 0, 60)
+            profileFrame.ZIndex = 500
+            
+            local pCorner = Instance.new("UICorner")
+            pCorner.CornerRadius = UDim.new(0, 12)
+            pCorner.Parent = profileFrame
+
+            local pStroke = Instance.new("UIStroke")
+            pStroke.Thickness = 1
+            pStroke.Color = Color3.fromRGB(100, 100, 100)
+            pStroke.Parent = profileFrame
+
+            local profileImage = Instance.new("ImageLabel")
+            profileImage.Name = "Avatar"
+            profileImage.Parent = profileFrame
+            profileImage.BackgroundTransparency = 1
+            profileImage.Position = UDim2.new(0, 10, 0, 10)
+            profileImage.Size = UDim2.new(0, 40, 0, 40)
+            profileImage.Image = getProfileThumbnail()
+            profileImage.ZIndex = 501
+            
+            local iCorner = Instance.new("UICorner")
+            iCorner.CornerRadius = UDim.new(1, 0)
+            iCorner.Parent = profileImage
+
+            local profileName = Instance.new("TextLabel")
+            profileName.Name = "UsernameLabel"
+            profileName.Parent = profileFrame
+            profileName.BackgroundTransparency = 1
+            profileName.Position = UDim2.new(0, 60, 0, 0)
+            profileName.Size = UDim2.new(1, -65, 1, 0)
+            profileName.Font = Enum.Font.GothamBold
+            profileName.Text = player.DisplayName or player.Name
+            profileName.TextColor3 = Color3.fromRGB(255, 255, 255)
+            profileName.TextSize = 13
+            profileName.TextXAlignment = Enum.TextXAlignment.Left
+            profileName.TextTruncate = Enum.TextTruncate.AtEnd
+            profileName.ZIndex = 501
+        end
+    end)
+end
+
+setupCustomUI(Window)
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+   
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
+local Options = Fluent.Options
+local function modifigui(prints)
+    local playerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    local gui = playerGui:FindFirstChild("AutoScrollConsole") or Instance.new("ScreenGui")
+
+    if not gui.Parent then
+        gui.Name = "AutoScrollConsole"
+        gui.ResetOnSpawn = false
+        gui.Parent = playerGui
+    end
+
+    local label = gui:FindFirstChild("MainLabel") or Instance.new("TextLabel")
+    if not label.Parent then
+        label.Name = "MainLabel"
+        label.Size = UDim2.new(0, 500, 0, 50)
+        label.Position = UDim2.new(0.5, 0, 0.05, 0)    -- ขยับขึ้นด้านบน
+        label.AnchorPoint = Vector2.new(0.5, 0)
+        label.BackgroundTransparency = 1               -- ลบพื้นหลัง
+        label.TextColor3 = Color3.fromRGB(0, 170, 255) -- สีฟ้า
+        label.TextSize = 25
+        label.Font = Enum.Font.FredokaOne
+        label.Parent = gui
+
+        -- เพิ่มขอบน้ำเงินให้กับตัวหนังสือ
+        local stroke = Instance.new("UIStroke")
+        stroke.Name = "TextStroke"
+        stroke.Thickness = 2
+        stroke.Color = Color3.fromRGB(0, 0, 128) -- สีน้ำเงินเข้ม
+        stroke.Parent = label
+    end
+
+    label.Text = prints
+end
+local function modifigui2(prints)
+    local playerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    local gui = playerGui:FindFirstChild("AutoScrollConsole") or Instance.new("ScreenGui")
+
+    if not gui.Parent then
+        gui.Name = "AutoScrollConsole"
+        gui.ResetOnSpawn = false
+        gui.Parent = playerGui
+    end
+
+    local label = gui:FindFirstChild("MainLabel2") or Instance.new("TextLabel")
+    if not label.Parent then
+        label.Name = "MainLabel2"
+        label.Size = UDim2.new(0, 500, 0, 50)
+        label.Position = UDim2.new(0.5, 0, 0.4, 0)     -- ตำแหน่งกลางจอ
+        label.AnchorPoint = Vector2.new(0.5, 0)
+        label.BackgroundTransparency = 1               -- ลบพื้นหลัง
+        label.TextColor3 = Color3.fromRGB(0, 170, 255) -- สีฟ้า
+        label.TextSize = 25
+        label.Font = Enum.Font.FredokaOne
+        label.Parent = gui
+
+        -- เพิ่มขอบน้ำเงินให้กับตัวหนังสือ
+        local stroke = Instance.new("UIStroke")
+        stroke.Name = "TextStroke"
+        stroke.Thickness = 2
+        stroke.Color = Color3.fromRGB(0, 0, 128) -- สีน้ำเงินเข้ม
+        stroke.Parent = label
+    end
+
+    label.Text = prints
+end
+
+local pl = game:GetService("Players").LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local pgui = pl:WaitForChild("PlayerGui")
+
+-- ฟังก์ชันสำหรับส่งคำสั่งตกปลา
+local function startFishing()
+    local remotes = ReplicatedStorage:WaitForChild("VerdantRemotes")
+    remotes:WaitForChild("VDT_Fishing.Windup"):FireServer()
+    remotes:WaitForChild("VDT_ToolHandler.Activated"):FireServer()
+    
+    local args = { 0.5 } -- ต้องเป็น Table เพื่อใช้ unpack
+    remotes:WaitForChild("VDT_Fishing.RequestCast"):FireServer(unpack(args))
+end
+
+-- รอโหลด UI ของมินิเกม
+
+local function m1()
+    local vim = game:GetService("VirtualInputManager")
+    vim:SendMouseButtonEvent(0, 0, 0, true, game, 0) -- กดคลิกซ้าย
+    task.wait(0.1)
+    vim:SendMouseButtonEvent(0, 0, 0, false, game, 0) -- ปล่อยคลิกซ้าย
+    
+end
+
+local function rod()
+    if not pgui:FindFirstChild("ReelBar")  then
+        startFishing()
+        task.wait(1)
+    
+    local strengthBar = pgui:FindFirstChild("StrengthBar")
+    if strengthBar and strengthBar.Enabled then
+        local sc1 = strengthBar.Holder.ReelGame.Holder.Scale
+        if sc1.Size.Y.Scale >= 0.7 then
+            m1()
+            task.wait(0.2)
+        end
+    
+        
+    end
+    end
+end
+
+local function reel()
+    if not pgui:FindFirstChild("StrengthBar") then
+    local reelBar = pgui:FindFirstChild("ReelBar")
+    if reelBar and reelBar.Enabled then
+        local ho1 = reelBar.Holder.ReelGame.Holder
+        local ho2 = ho1.OuterZone
+        local ho3 = ho1.YourBar
+        if ho3.Position.Y.Scale >= ho2.Position.Y.Scale then
+            task.wait(0.1)
+            m1()
+             task.wait(0.3)
+        end
+    end
+    end
+end
+local function locknpc()
+    local b1 =game:GetService("Players").LocalPlayer.Backpack
+    for _, v in ipairs(b1:GetChildren()) do
+        local rate = v:GetAttribute("Rarity")
+        local id  = v:GetAttribute("_id")
+        if rate == "Mythic" or rate == "Legendary" then
+           ReplicatedStorage:WaitForChild("VerdantRemotes"):WaitForChild("VDT_Inventory.SetLocked"):FireServer(id,true)
+        else
+            local gay = {
+                0.7
+            }
+            ReplicatedStorage:WaitForChild("VerdantRemotes"):WaitForChild("VDT_Sell.SellAll"):FireServer(unpack(gay))
+        end
+    end
+end
+  -- --- Main Tab ---
+    Tabs.Main:AddParagraph({
+        Title = "Farming Status",
+        Content = "Control your automated harvesting and selling here."
+    })
+    
+   
+
+
+    local AutoRodToggle = Tabs.Main:AddToggle("AutoRod", {
+        Title = "Auto Rod (Cast)",
+        Default = false
+    })
+
+    local AutoReelToggle = Tabs.Main:AddToggle("AutoReel", {
+        Title = "Auto Reel (Catch)",
+        Default = false
+    })
+    local lockToggle = Tabs.Main:AddToggle("lockToggle", {
+        Title = "Lock Fish",
+        Default = false
+    })
+
+    
+
+    -- Background Loop for Minigame
+    task.spawn(function()
+        while true do
+            if Options.AutoRod and Options.AutoRod.Value then
+                rod()
+            end
+            
+            if Options.lockToggle and Options.lockToggle.Value then
+                locknpc()
+            end
+            task.wait(0.05)
+        end
+    end)
+    task.spawn(function()
+        while true do
+            
+            if Options.AutoReel and Options.AutoReel.Value then
+                reel()
+            end
+            
+            task.wait(0.05)
+        end
+    end)
+
+-- Settings
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+Window:SelectTab(1)
+SaveManager:LoadAutoloadConfig()
+
+Fluent:Notify({
+    Title = "Script Loaded",
+    Content = "Garden Horizone is ready.",
+    Duration = 5
+})
+
+
